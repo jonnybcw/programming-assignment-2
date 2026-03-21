@@ -4,19 +4,20 @@
 #include <stdio.h>
 #include <string.h>
 
+// terminal tokens
 typedef enum {read, write, id, literal, becomes,
                 add, sub, mul, div, lparen, rparen, eof} token;
 
 extern char token_image[];
 
-extern char *names[];
+extern char *names[]; // terminal names
 
-const char *nt_names[] = {
+const char *nt_names[] = {   // non-terminal names
     "program", "stmt_list", "stmt", "expr", "term_tail", 
     "term", "factor_tail", "factor", "add_op", "mult_op"
 };
 
-static token input_token;
+static token input_token;    // parser lookahead token
 
 static FILE *file;
 
@@ -57,14 +58,14 @@ int table[100][100];
 
 
 void initialize_table() {
-    // Initialize the table to -1
+    // default every cell to invalid production (-1).
     for (int i = 0; i < 100; i++) {
         for (int j = 0; j < 100; j++) {
             table[i][j] = -1;
         }
     }
 
-    // Initialize the table with the productions
+    // initialize the table with the productions
     table[program][id] = 1;
     table[program][read] = 1;
     table[program][write] = 1;
@@ -140,6 +141,7 @@ void systax_error(int expected, int top){
 void match(token expected) {
     if (input_token == expected) {
     	printf ("Token matched: %s\n", names[input_token]);
+        /* consume terminal and move lookahead */
         input_token = scan(file);
     }
     else systax_error(expected, -1);
@@ -159,28 +161,33 @@ int main(int argc, char *argv[]) {
 
     initialize_table();
 
+    /* initialize parser lookahead */
     input_token = scan(file);
+    /* push grammar start symbol */
     stack[stack_top] = program;
     stack_top++;
 
     while (stack_top > 0) {
+        /* pop off the top of the stack */
         int top = stack[stack_top - 1];
         stack_top--;
 
         if (top < 12) {
-            // Terminal
+            // terminal: must match input
             match(top);
         } else {
-            // Non-terminal
+            // non-terminal: pick production from table
             int production = table[top][input_token];
             if (production == -1) {
                 systax_error(-1, top);
             } else {
                 int size = 0;
+                /* measure the size of the production */
                 while (productions[production - 1][size] != -1) {
                     size++;
                 }
 
+                /* push the production onto the stack in reverse order */
                 while (size > 0) {
                     int prod_value = productions[production - 1][size - 1];
                     stack[stack_top] = prod_value;

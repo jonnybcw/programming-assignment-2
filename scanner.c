@@ -3,11 +3,13 @@
 #include <string.h>
 #include <stdbool.h>
 
+// terminal tokens
 typedef enum {read, write, id, literal, becomes,
                 add, sub, mul, div, lparen, rparen, eof} token;
 
 char token_image[100];
 
+// terminal names
 char* names[] = {"read", "write", "id", "literal", "becomes",
                 "add", "sub", "mul", "div", "lparen", "rparen", "eof"};
 
@@ -15,7 +17,7 @@ extern void exit(int);
 
 char token_char;
 
-static token input_token;
+static token input_token; // parser lookahead token
 
 int line = 1;
 
@@ -50,6 +52,7 @@ token scan(FILE *file) {
     if (c == EOF)
         return eof;
     if (isalpha(c)) {
+        /* handle identifiers and reserved words */
         do {
             token_image[i++] = c;
             c = fgetc(file);
@@ -60,6 +63,7 @@ token scan(FILE *file) {
         else return id;
     }
     else if (isdigit(c)) {
+        /* handle integer literals */
         do {
             token_image[i++] = c;
             c = fgetc(file);
@@ -69,6 +73,7 @@ token scan(FILE *file) {
     } else switch (c) {
         case ':':
             c = fgetc(file);
+            /* handle assignment operator */
             if (c != '=') {
                 error(c);
             } else {
@@ -81,12 +86,15 @@ token scan(FILE *file) {
         case '/':
             c = fgetc(file); 
             if (c == '/') {
+                /* skip until end of line comment */
                 while (c != '\n' && c != EOF) {
                     c = fgetc(file);
                 }
+                /* recurse to continue scanning */
                 return scan(file);
             } else if (c == '*') {
                 bool isComment = false;
+                /* scan until closing */ 
                 while (1) {
                     c = fgetc(file);
                     if (c == '*') {
@@ -105,10 +113,12 @@ token scan(FILE *file) {
                 }
                 if (isComment){
                     c = fgetc(file);
+                    /* recurse to continue scanning */
                     return scan(file);
                 }
                 break;
             } else {
+                /* handle division operator */
                 return div;
             }
         case '(': c = fgetc(file); return lparen;
